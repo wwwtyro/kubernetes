@@ -83,6 +83,7 @@ def reset_states_for_delivery():
     remove_state('kubernetes-master.components.started')
     remove_state('kube-dns.available')
     remove_state('kubernetes.dashboard.available')
+    remove_state('kubernetes-master.app_version.set')
 
 
 @when('cni.connected')
