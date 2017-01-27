@@ -6,7 +6,7 @@ After=network.target
 [Service]
 EnvironmentFile=-/etc/default/kube-defaults
 EnvironmentFile=-/etc/default/kube-apiserver
-ExecStart=/usr/local/bin/kube-apiserver \
+ExecStart=/snap/bin/kube-apiserver \
 	    $KUBE_LOGTOSTDERR \
 	    $KUBE_LOG_LEVEL \
 	    $KUBE_API_ADDRESS \

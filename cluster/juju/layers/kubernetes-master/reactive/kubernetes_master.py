@@ -43,6 +43,9 @@ from charmhelpers.core.templating import render
 from charmhelpers.fetch import apt_install
 
 
+os.environ['PATH'] += os.pathsep + os.path.join(os.sep, 'snap', 'bin')
+
+
 dashboard_templates = [
     'dashboard-controller.yaml',
     'dashboard-service.yaml',
@@ -78,58 +81,8 @@ def reset_states_for_delivery():
         hookenv.log('Stopping {0} service.'.format(service))
         host.service_stop(service)
     remove_state('kubernetes-master.components.started')
-    remove_state('kubernetes-master.components.installed')
     remove_state('kube-dns.available')
     remove_state('kubernetes.dashboard.available')
-
-
-@when_not('kubernetes-master.components.installed')
-def install():
-    '''Unpack and put the Kubernetes master files on the path.'''
-    # Get the resource via resource_get
-    try:
-        archive = hookenv.resource_get('kubernetes')
-    except Exception:
-        message = 'Error fetching the kubernetes resource.'
-        hookenv.log(message)
-        hookenv.status_set('blocked', message)
-        return
-
-    if not archive:
-        hookenv.log('Missing kubernetes resource.')
-        hookenv.status_set('blocked', 'Missing kubernetes resource.')
-        return
-
-    # Handle null resource publication, we check if filesize < 1mb
-    filesize = os.stat(archive).st_size
-    if filesize < 1000000:
-        hookenv.status_set('blocked', 'Incomplete kubernetes resource.')
-        return
-
-    hookenv.status_set('maintenance', 'Unpacking kubernetes resource.')
-    files_dir = os.path.join(hookenv.charm_dir(), 'files')
-
-    os.makedirs(files_dir, exist_ok=True)
-
-    command = 'tar -xvzf {0} -C {1}'.format(archive, files_dir)
-    hookenv.log(command)
-    check_call(split(command))
-
-    apps = [
-        {'name': 'kube-apiserver', 'path': '/usr/local/bin'},
-        {'name': 'kube-controller-manager', 'path': '/usr/local/bin'},
-        {'name': 'kube-scheduler', 'path': '/usr/local/bin'},
-        {'name': 'kubectl', 'path': '/usr/local/bin'},
-    ]
-
-    for app in apps:
-        unpacked = '{}/{}'.format(files_dir, app['name'])
-        app_path = os.path.join(app['path'], app['name'])
-        install = ['install', '-v', '-D', unpacked, app_path]
-        hookenv.log(install)
-        check_call(install)
-
-    set_state('kubernetes-master.components.installed')
 
 
 @when('cni.connected')
@@ -140,7 +93,6 @@ def configure_cni(cni):
     cni.set_config(is_master=True, kubeconfig_path='')
 
 
-@when('kubernetes-master.components.installed')
 @when_not('authentication.setup')
 def setup_authentication():
     '''Setup basic authentication and token access for the cluster.'''
@@ -172,14 +124,15 @@ def setup_authentication():
     set_state('authentication.setup')
 
 
-@when('kubernetes-master.components.installed')
+@when_not('kubernetes-master.app_version.set')
 def set_app_version():
     ''' Declare the application version to juju '''
     version = check_output(['kube-apiserver', '--version'])
     hookenv.application_version_set(version.split(b' v')[-1].rstrip())
+    set_state('kubernetes-master.app_version.set')
 
 
-@when('kube-dns.available', 'kubernetes-master.components.installed')
+@when('kube-dns.available')
 def idle_status():
     ''' Signal at the end of the run that we are running. '''
     if hookenv.config('service-cidr') != service_cidr():
@@ -188,8 +141,7 @@ def idle_status():
         hookenv.status_set('active', 'Kubernetes master running.')
 
 
-@when('etcd.available', 'kubernetes-master.components.installed',
-      'certificates.server.cert.available')
+@when('etcd.available', 'certificates.server.cert.available')
 @when_not('kubernetes-master.components.started')
 def start_master(etcd, tls):
     '''Run the Kubernetes master components.'''
@@ -293,7 +245,6 @@ def remove_dashboard_addons():
         remove_state('kubernetes.dashboard.available')
 
 
-@when('kubernetes-master.components.installed')
 @when_not('kube-dns.available')
 def start_kube_dns():
     ''' State guard to starting DNS '''
@@ -330,8 +281,8 @@ def start_kube_dns():
     set_state('kube-dns.available')
 
 
-@when('kubernetes-master.components.installed', 'loadbalancer.available',
-      'certificates.ca.available', 'certificates.client.cert.available')
+@when('loadbalancer.available', 'certificates.ca.available',
+      'certificates.client.cert.available')
 def loadbalancer_kubeconfig(loadbalancer, ca, client):
     # Get the potential list of loadbalancers from the relation object.
     hosts = loadbalancer.get_addresses_ports()
@@ -343,8 +294,7 @@ def loadbalancer_kubeconfig(loadbalancer, ca, client):
     build_kubeconfig(server)
 
 
-@when('kubernetes-master.components.installed',
-      'certificates.ca.available', 'certificates.client.cert.available')
+@when('certificates.ca.available', 'certificates.client.cert.available')
 @when_not('loadbalancer.available')
 def create_self_config(ca, client):
     '''Create a kubernetes configuration for the master unit.'''
@@ -495,10 +445,6 @@ def build_kubeconfig(server):
         kubeconfig_path = os.path.join(destination_directory, 'config')
         # Create the kubeconfig on this system so users can access the cluster.
         create_kubeconfig(kubeconfig_path, server, ca, key, cert)
-        # Copy the kubectl binary to the destination directory.
-        cmd = ['install', '-v', '-o', 'ubuntu', '-g', 'ubuntu',
-               '/usr/local/bin/kubectl', destination_directory]
-        check_call(cmd)
         # Make the config file readable by the ubuntu users so juju scp works.
         cmd = ['chown', 'ubuntu:ubuntu', kubeconfig_path]
         check_call(cmd)
