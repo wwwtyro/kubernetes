@@ -1,6 +1,7 @@
 repo: https://github.com/kubernetes/kubernetes.git
 includes:
   - 'layer:basic'
+  - 'layer:snap'
   - 'layer:tls-client'
   - 'layer:debug'
   - 'interface:etcd'
@@ -13,6 +14,31 @@ options:
   basic:
     packages:
       - socat
+  snap:
+    kubectl:
+      channel: edge
+      devmode: false
+      jailmode: false
+      dangerous: false
+      classic: true
+    kube-apiserver:
+      channel: edge
+      devmode: false
+      jailmode: false
+      dangerous: false
+      classic: true
+    kube-controller-manager:
+      channel: edge
+      devmode: false
+      jailmode: false
+      dangerous: false
+      classic: true
+    kube-scheduler:
+      channel: edge
+      devmode: false
+      jailmode: false
+      dangerous: false
+      classic: true
   tls-client:
     ca_certificate_path: '/srv/kubernetes/ca.crt'
     server_certificate_path: '/srv/kubernetes/server.crt'
