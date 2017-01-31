@@ -15,7 +15,9 @@ ExecStart=/snap/bin/kube-apiserver \
 	    $KUBE_ADMISSION_CONTROL \
 	    $KUBE_API_ARGS
 Restart=on-failure
-Type=notify
+# changed to simple to work with confined snaps
+#Type=notify
+Type=simple
 LimitNOFILE=65536
 
 [Install]
