@@ -100,27 +100,27 @@ def setup_authentication():
     api_opts = FlagManager('kube-apiserver')
     controller_opts = FlagManager('kube-controller-manager')
 
-    api_opts.add('--basic-auth-file', '/srv/kubernetes/basic_auth.csv')
-    api_opts.add('--token-auth-file', '/srv/kubernetes/known_tokens.csv')
+    api_opts.add('--basic-auth-file', '/root/cdk/basic_auth.csv')
+    api_opts.add('--token-auth-file', '/root/cdk/known_tokens.csv')
     api_opts.add('--service-cluster-ip-range', service_cidr())
     hookenv.status_set('maintenance', 'Rendering authentication templates.')
-    htaccess = '/srv/kubernetes/basic_auth.csv'
+    htaccess = '/root/cdk/basic_auth.csv'
     if not os.path.isfile(htaccess):
         setup_basic_auth('admin', 'admin', 'admin')
-    known_tokens = '/srv/kubernetes/known_tokens.csv'
+    known_tokens = '/root/cdk/known_tokens.csv'
     if not os.path.isfile(known_tokens):
         setup_tokens(None, 'admin', 'admin')
         setup_tokens(None, 'kubelet', 'kubelet')
         setup_tokens(None, 'kube_proxy', 'kube_proxy')
     # Generate the default service account token key
-    os.makedirs('/etc/kubernetes', exist_ok=True)
-    cmd = ['openssl', 'genrsa', '-out', '/etc/kubernetes/serviceaccount.key',
+    os.makedirs('/root/cdk', exist_ok=True)
+    cmd = ['openssl', 'genrsa', '-out', '/root/cdk/serviceaccount.key',
            '2048']
     check_call(cmd)
     api_opts.add('--service-account-key-file',
-                 '/etc/kubernetes/serviceaccount.key')
+                 '/root/cdk/serviceaccount.key')
     controller_opts.add('--service-account-private-key-file',
-                        '/etc/kubernetes/serviceaccount.key')
+                        '/root/cdk/serviceaccount.key')
 
     set_state('authentication.setup')
 
@@ -383,7 +383,7 @@ def ceph_storage(ceph_admin):
 def create_addon(template, context):
     '''Create an addon from a template'''
     source = 'addons/' + template
-    target = '/etc/kubernetes/addons/' + template
+    target = '/root/cdk/addons/' + template
     render(source, target, context)
     cmd = ['kubectl', 'apply', '-f', target]
     check_call(cmd)
@@ -391,7 +391,7 @@ def create_addon(template, context):
 
 def delete_addon(template):
     '''Delete an addon from a template'''
-    target = '/etc/kubernetes/addons/' + template
+    target = '/root/cdk/addons/' + template
     cmd = ['kubectl', 'delete', '-f', target]
     call(cmd)
 
@@ -485,7 +485,7 @@ def handle_etcd_relation(reldata):
     etcd declares itself as available'''
     connection_string = reldata.get_connection_string()
     # Define where the etcd tls files will be kept.
-    etcd_dir = '/etc/ssl/etcd'
+    etcd_dir = '/root/cdk/etcd'
     # Create paths to the etcd client ca, key, and cert file locations.
     ca = os.path.join(etcd_dir, 'client-ca.pem')
     key = os.path.join(etcd_dir, 'client-key.pem')
@@ -585,20 +585,20 @@ def render_service(service_name, context):
 
 def setup_basic_auth(username='admin', password='admin', user='admin'):
     '''Create the htacces file and the tokens.'''
-    srv_kubernetes = '/srv/kubernetes'
-    if not os.path.isdir(srv_kubernetes):
-        os.makedirs(srv_kubernetes)
-    htaccess = os.path.join(srv_kubernetes, 'basic_auth.csv')
+    root_cdk = '/root/cdk'
+    if not os.path.isdir(root_cdk):
+        os.makedirs(root_cdk)
+    htaccess = os.path.join(root_cdk, 'basic_auth.csv')
     with open(htaccess, 'w') as stream:
         stream.write('{0},{1},{2}'.format(username, password, user))
 
 
 def setup_tokens(token, username, user):
     '''Create a token file for kubernetes authentication.'''
-    srv_kubernetes = '/srv/kubernetes'
-    if not os.path.isdir(srv_kubernetes):
-        os.makedirs(srv_kubernetes)
-    known_tokens = os.path.join(srv_kubernetes, 'known_tokens.csv')
+    root_cdk = '/root/cdk'
+    if not os.path.isdir(root_cdk):
+        os.makedirs(root_cdk)
+    known_tokens = os.path.join(root_cdk, 'known_tokens.csv')
     if not token:
         alpha = string.ascii_letters + string.digits
         token = ''.join(random.SystemRandom().choice(alpha) for _ in range(32))
