@@ -32,13 +32,13 @@ options:
       devmode: false
       jailmode: false
       dangerous: false
-      classic: true
+      classic: false
     kube-scheduler:
       channel: edge
       devmode: false
       jailmode: false
       dangerous: false
-      classic: true
+      classic: false
   tls-client:
     ca_certificate_path: '/root/cdk/ca.crt'
     server_certificate_path: '/root/cdk/server.crt'
