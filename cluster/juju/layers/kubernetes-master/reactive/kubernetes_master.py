@@ -556,18 +556,6 @@ def render_files():
     controller_opts.add('--master', 'http://127.0.0.1:8080')
 
 
-def render_service(service_name, context):
-    '''Render the systemd service by name.'''
-    unit_directory = '/lib/systemd/system'
-    source = '{0}.service'.format(service_name)
-    target = os.path.join(unit_directory, '{0}.service'.format(service_name))
-    render(source, target, context)
-    conf_directory = '/etc/default'
-    source = '{0}.defaults'.format(service_name)
-    target = os.path.join(conf_directory, service_name)
-    render(source, target, context)
-
-
 def setup_basic_auth(username='admin', password='admin', user='admin'):
     '''Create the htacces file and the tokens.'''
     root_cdk = '/root/cdk'
