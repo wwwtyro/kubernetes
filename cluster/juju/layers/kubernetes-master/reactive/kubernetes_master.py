@@ -156,8 +156,13 @@ def start_master(etcd, tls):
     render_files()
     hookenv.status_set('maintenance',
                        'Starting the Kubernetes master services.')
-    services = ['kube-apiserver',
-                'kube-controller-manager',
+
+    api_opts = FlagManager('kube-apiserver').to_s()
+    cmd = ['snap', 'set', 'kube-apiserver', "args=%s" % api_opts]
+    check_call(cmd)
+    host.service_restart('snap.kube-apiserver.daemon')
+
+    services = ['kube-controller-manager',
                 'kube-scheduler']
     for service in services:
         hookenv.log('Starting {0} service.'.format(service))
@@ -543,6 +548,13 @@ def render_files():
     api_opts.add('--client-ca-file', ca_cert_path)
     api_opts.add('--tls-cert-file', server_cert_path)
     api_opts.add('--tls-private-key-file', server_key_path)
+    api_opts.add('--logtostderr', 'true')
+    api_opts.add('--allow-privileged', 'false')
+    api_opts.add('--insecure-bind-address', '127.0.0.1')
+    api_opts.add('--insecure-port', '8080')
+    api_opts.add('--admission-control',
+                 'NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota',
+                 strict=True)
 
     scheduler_opts.add('--v', '2')
 
@@ -551,13 +563,11 @@ def render_files():
     controller_opts.add('--v', '2')
     controller_opts.add('--root-ca-file', ca_cert_path)
 
-    context.update({'kube_apiserver_flags': api_opts.to_s(),
-                    'kube_scheduler_flags': scheduler_opts.to_s(),
+    context.update({'kube_scheduler_flags': scheduler_opts.to_s(),
                     'kube_controller_manager_flags': controller_opts.to_s()})
 
     # Render the configuration files that contains parameters for
     # the apiserver, scheduler, and controller-manager
-    render_service('kube-apiserver', context)
     render_service('kube-controller-manager', context)
     render_service('kube-scheduler', context)
 
@@ -566,7 +576,6 @@ def render_files():
 
     # when files change on disk, we need to inform systemd of the changes
     call(['systemctl', 'daemon-reload'])
-    call(['systemctl', 'enable', 'kube-apiserver'])
     call(['systemctl', 'enable', 'kube-controller-manager'])
     call(['systemctl', 'enable', 'kube-scheduler'])
 
