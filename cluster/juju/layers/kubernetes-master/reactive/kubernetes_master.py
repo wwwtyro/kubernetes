@@ -155,7 +155,7 @@ def start_master(etcd, tls):
     hookenv.status_set('maintenance',
                        'Starting the Kubernetes master services.')
 
-    services = ['kube-apiserver'
+    services = ['kube-apiserver',
                 'kube-controller-manager',
                 'kube-scheduler']
     for service in services:
