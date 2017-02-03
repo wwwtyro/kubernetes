@@ -528,16 +528,6 @@ def handle_etcd_relation(reldata):
 def render_files():
     '''Use jinja templating to render the docker-compose.yml and master.json
     file to contain the dynamic data for the configuration files.'''
-    context = {}
-    config = hookenv.config()
-    # Add the charm configuration data to the context.
-    context.update(config)
-
-    # Update the context with extra values: arch, and networking information
-    context.update({'arch': arch(),
-                    'master_address': hookenv.unit_get('private-address'),
-                    'public_address': hookenv.unit_get('public-address'),
-                    'private_address': hookenv.unit_get('private-address')})
 
     api_opts = FlagManager('kube-apiserver')
     controller_opts = FlagManager('kube-controller-manager')
@@ -573,20 +563,6 @@ def render_files():
     controller_opts.add('--root-ca-file', ca_cert_path)
     controller_opts.add('--logtostderr', 'true')
     controller_opts.add('--master', 'http://127.0.0.1:8080')
-
-    context.update({'kube_scheduler_flags': scheduler_opts.to_s(),
-                    'kube_controller_manager_flags': controller_opts.to_s()})
-
-    # Render the configuration files that contains parameters for
-    # the apiserver, scheduler, and controller-manager
-    render_service('kube-controller-manager', context)
-    render_service('kube-scheduler', context)
-
-    # explicitly render the generic defaults file
-    render('kube-defaults.defaults', '/etc/default/kube-defaults', context)
-
-    # when files change on disk, we need to inform systemd of the changes
-    call(['systemctl', 'daemon-reload'])
 
 
 def render_service(service_name, context):
