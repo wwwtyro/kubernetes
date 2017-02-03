@@ -157,16 +157,14 @@ def start_master(etcd, tls):
     hookenv.status_set('maintenance',
                        'Starting the Kubernetes master services.')
 
-    api_opts = FlagManager('kube-apiserver').to_s()
-    cmd = ['snap', 'set', 'kube-apiserver', "args=%s" % api_opts]
-    check_call(cmd)
-    host.service_restart('snap.kube-apiserver.daemon')
-
-    services = ['kube-controller-manager',
+    services = ['kube-apiserver'
+                'kube-controller-manager',
                 'kube-scheduler']
     for service in services:
-        hookenv.log('Starting {0} service.'.format(service))
-        host.service_start(service)
+        cmd = ['snap', 'set', service, "args=%s" % FlagManager(service).to_s()]
+        check_call(cmd)
+        host.service_restart('snap.%s.daemon' % service)
+
     hookenv.open_port(6443)
     set_state('kubernetes-master.components.started')
 
@@ -557,11 +555,15 @@ def render_files():
                  strict=True)
 
     scheduler_opts.add('--v', '2')
+    scheduler_opts.add('--logtostderr', 'true')
+    scheduler_opts.add('--master', 'http://127.0.0.1:8080')
 
     # Default to 3 minute resync. TODO: Make this configureable?
     controller_opts.add('--min-resync-period', '3m')
     controller_opts.add('--v', '2')
     controller_opts.add('--root-ca-file', ca_cert_path)
+    controller_opts.add('--logtostderr', 'true')
+    controller_opts.add('--master', 'http://127.0.0.1:8080')
 
     context.update({'kube_scheduler_flags': scheduler_opts.to_s(),
                     'kube_controller_manager_flags': controller_opts.to_s()})
@@ -576,8 +578,6 @@ def render_files():
 
     # when files change on disk, we need to inform systemd of the changes
     call(['systemctl', 'daemon-reload'])
-    call(['systemctl', 'enable', 'kube-controller-manager'])
-    call(['systemctl', 'enable', 'kube-scheduler'])
 
 
 def render_service(service_name, context):
