@@ -35,6 +35,7 @@ from charmhelpers.core.host import service_stop
 
 kubeconfig_path = '/srv/kubernetes/config'
 
+os.environ['PATH'] += os.pathsep + os.path.join(os.sep, 'snap', 'bin')
 
 @hook('upgrade-charm')
 def remove_installed_state():
@@ -90,9 +91,6 @@ def install_kubernetes_components():
     check_call(cmd)
 
     apps = [
-        {'name': 'kubelet', 'path': '/usr/local/bin'},
-        {'name': 'kube-proxy', 'path': '/usr/local/bin'},
-        {'name': 'kubectl', 'path': '/usr/local/bin'},
         {'name': 'loopback', 'path': '/opt/cni/bin'}
     ]
 

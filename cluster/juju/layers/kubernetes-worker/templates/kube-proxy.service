@@ -7,7 +7,7 @@ After=network.target
 [Service]
 EnvironmentFile=-/etc/default/kube-default
 EnvironmentFile=-/etc/default/kube-proxy
-ExecStart=/usr/local/bin/kube-proxy \
+ExecStart=/snap/bin/kube-proxy \
 	    $KUBE_LOGTOSTDERR \
 	    $KUBE_LOG_LEVEL \
 	    $KUBE_MASTER \
