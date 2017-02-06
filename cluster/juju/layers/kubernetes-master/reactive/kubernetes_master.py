@@ -147,11 +147,10 @@ def idle_status():
 def start_master(etcd, tls):
     '''Run the Kubernetes master components.'''
     hookenv.status_set('maintenance',
-                       'Rendering the Kubernetes master systemd files.')
+                       'Configuring the Kubernetes master services.')
     freeze_service_cidr()
     handle_etcd_relation(etcd)
-    # Use the etcd relation object to render files with etcd information.
-    render_files()
+    configure_master_services()
     hookenv.status_set('maintenance',
                        'Starting the Kubernetes master services.')
 
@@ -159,8 +158,6 @@ def start_master(etcd, tls):
                 'kube-controller-manager',
                 'kube-scheduler']
     for service in services:
-        cmd = ['snap', 'set', service, "args=%s" % FlagManager(service).to_s()]
-        check_call(cmd)
         host.service_restart('snap.%s.daemon' % service)
 
     hookenv.open_port(6443)
@@ -525,9 +522,9 @@ def handle_etcd_relation(reldata):
     api_opts.add('--etcd-servers', connection_string, strict=True)
 
 
-def render_files():
-    '''Use jinja templating to render the docker-compose.yml and master.json
-    file to contain the dynamic data for the configuration files.'''
+def configure_master_services():
+    ''' Add remaining flags for the master services and configure snaps to use
+    them '''
 
     api_opts = FlagManager('kube-apiserver')
     controller_opts = FlagManager('kube-controller-manager')
@@ -553,16 +550,23 @@ def render_files():
                  'NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota',
                  strict=True)
 
-    scheduler_opts.add('--v', '2')
-    scheduler_opts.add('--logtostderr', 'true')
-    scheduler_opts.add('--master', 'http://127.0.0.1:8080')
-
     # Default to 3 minute resync. TODO: Make this configureable?
     controller_opts.add('--min-resync-period', '3m')
     controller_opts.add('--v', '2')
     controller_opts.add('--root-ca-file', ca_cert_path)
     controller_opts.add('--logtostderr', 'true')
     controller_opts.add('--master', 'http://127.0.0.1:8080')
+
+    scheduler_opts.add('--v', '2')
+    scheduler_opts.add('--logtostderr', 'true')
+    scheduler_opts.add('--master', 'http://127.0.0.1:8080')
+
+    cmd = ['snap', 'set', 'kube-apiserver', 'args=%s' % api_opts.to_s()]
+    check_call(cmd)
+    cmd = ['snap', 'set', 'kube-controller-manager', 'args=%s' % controller_opts.to_s()]
+    check_call(cmd)
+    cmd = ['snap', 'set', 'kube-scheduler', 'args=%s' % scheduler_opts.to_s()]
+    check_call(cmd)
 
 
 def setup_basic_auth(username='admin', password='admin', user='admin'):
