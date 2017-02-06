@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import sys
 
 from charmhelpers.core.hookenv import action_get
@@ -22,6 +23,7 @@ from charmhelpers.core.hookenv import unit_public_ip
 from charms.templating.jinja2 import render
 from subprocess import call
 
+os.environ['PATH'] += os.pathsep + os.path.join(os.sep, 'snap', 'bin')
 
 context = {}
 context['replicas'] = action_get('replicas')

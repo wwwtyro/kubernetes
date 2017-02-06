@@ -8,7 +8,7 @@ Requires=docker.service
 WorkingDirectory=/var/lib/kubelet
 EnvironmentFile=-/etc/default/kube-default
 EnvironmentFile=-/etc/default/kubelet
-ExecStart=/usr/local/bin/kubelet \
+ExecStart=/snap/bin/kubelet \
 	    $KUBE_LOGTOSTDERR \
 	    $KUBE_LOG_LEVEL \
 	    $KUBELET_ADDRESS \
