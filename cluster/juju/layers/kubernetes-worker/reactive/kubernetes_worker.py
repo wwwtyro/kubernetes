@@ -33,7 +33,7 @@ from charmhelpers.core import hookenv
 from charmhelpers.core.host import service_stop
 
 
-kubeconfig_path = '/srv/kubernetes/config'
+kubeconfig_path = '/root/cdk/kubeconfig'
 
 os.environ['PATH'] += os.pathsep + os.path.join(os.sep, 'snap', 'bin')
 

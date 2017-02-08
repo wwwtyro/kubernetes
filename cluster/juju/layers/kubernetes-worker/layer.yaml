@@ -32,7 +32,10 @@ options:
       devmode: false
       jailmode: false
       dangerous: false
-      classic: true
+      classic: false
+      connect:
+        - ["kube-proxy:firewall-control", ":firewall-control"]
+        - ["kube-proxy:network-control", ":network-control"]
   tls-client:
     ca_certificate_path: '/srv/kubernetes/ca.crt'
     server_certificate_path: '/srv/kubernetes/server.crt'
