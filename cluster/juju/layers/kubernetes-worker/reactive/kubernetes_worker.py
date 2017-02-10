@@ -17,7 +17,7 @@
 import os
 
 from shlex import split
-from subprocess import call, check_call, check_output
+from subprocess import check_call, check_output
 from subprocess import CalledProcessError
 from socket import gethostname
 
@@ -30,12 +30,13 @@ from charms.kubernetes.flagmanager import FlagManager
 from charms.templating.jinja2 import render
 
 from charmhelpers.core import hookenv
-from charmhelpers.core.host import service_stop
+from charmhelpers.core.host import service_stop, service_restart
 
 
 kubeconfig_path = '/srv/kubernetes/config'
 
 os.environ['PATH'] += os.pathsep + os.path.join(os.sep, 'snap', 'bin')
+
 
 @hook('upgrade-charm')
 def remove_installed_state():
@@ -159,15 +160,8 @@ def start_worker(kube_api, kube_dns, cni):
 
     if (data_changed('kube-api-servers', servers) or
             data_changed('kube-dns', dns)):
-        # Initialize a FlagManager object to add flags to unit data.
-        opts = FlagManager('kubelet')
-        # Append the DNS flags + data to the FlagManager object.
-
-        opts.add('--cluster-dns', dns['sdn-ip']) # FIXME: sdn-ip needs a rename
-        opts.add('--cluster-domain', dns['domain'])
-
         create_config(servers[0])
-        render_init_scripts(servers)
+        configure_worker_services(servers, dns)
         set_state('kubernetes-worker.config.created')
         restart_unit_services()
         update_kubelet_status()
@@ -293,45 +287,31 @@ def create_config(server):
                       user='kubelet')
 
 
-def render_init_scripts(api_servers):
-    ''' We have related to either an api server or a load balancer connected
-    to the apiserver. Render the config files and prepare for launch '''
-    context = {}
-    context.update(hookenv.config())
-
-    # Get the tls paths from the layer data.
-    layer_options = layer.options('tls-client')
-    context['ca_cert_path'] = layer_options.get('ca_certificate_path')
-    context['client_cert_path'] = layer_options.get('client_certificate_path')
-    context['client_key_path'] = layer_options.get('client_key_path')
-
-    unit_name = os.getenv('JUJU_UNIT_NAME').replace('/', '-')
-    context.update({'kube_api_endpoint': ','.join(api_servers),
-                    'JUJU_UNIT_NAME': unit_name})
-
-    # Create a flag manager for kubelet to render kubelet_opts.
+def configure_worker_services(api_servers, dns):
+    ''' Add remaining flags for the worker services and configure snaps to use
+    them '''
     kubelet_opts = FlagManager('kubelet')
-    # Declare to kubelet it needs to read from kubeconfig
     kubelet_opts.add('--require-kubeconfig', None)
     kubelet_opts.add('--kubeconfig', kubeconfig_path)
     kubelet_opts.add('--network-plugin', 'cni')
-    context['kubelet_opts'] = kubelet_opts.to_s()
-    # Create a flag manager for kube-proxy to render kube_proxy_opts.
+    kubelet_opts.add('--logtostderr', 'true')
+    kubelet_opts.add('--v', '0')
+    kubelet_opts.add('--address', '0.0.0.0')
+    kubelet_opts.add('--port', '10250')
+    kubelet_opts.add('--allow-privileged', 'false')
+    kubelet_opts.add('--cluster-dns', dns['sdn-ip'])
+    kubelet_opts.add('--cluster-domain', dns['domain'])
+
     kube_proxy_opts = FlagManager('kube-proxy')
     kube_proxy_opts.add('--kubeconfig', kubeconfig_path)
-    context['kube_proxy_opts'] = kube_proxy_opts.to_s()
+    kube_proxy_opts.add('--logtostderr', 'true')
+    kube_proxy_opts.add('--v', '0')
+    kube_proxy_opts.add('--master', ','.join(api_servers), strict=True)
 
-    os.makedirs('/var/lib/kubelet', exist_ok=True)
-    # Set the user when rendering config
-    context['user'] = 'kubelet'
-    # Set the user when rendering config
-    context['user'] = 'kube-proxy'
-    render('kube-default', '/etc/default/kube-default', context)
-    render('kubelet.defaults', '/etc/default/kubelet', context)
-    render('kube-proxy.defaults', '/etc/default/kube-proxy', context)
-    render('kube-proxy.service', '/lib/systemd/system/kube-proxy.service',
-           context)
-    render('kubelet.service', '/lib/systemd/system/kubelet.service', context)
+    cmd = ['snap', 'set', 'kubelet', 'args=%s' % kubelet_opts.to_s()]
+    check_call(cmd)
+    cmd = ['snap', 'set', 'kube-proxy', 'args=%s' % kube_proxy_opts.to_s()]
+    check_call(cmd)
 
 
 def create_kubeconfig(kubeconfig, server, ca, key, certificate, user='ubuntu',
@@ -381,16 +361,11 @@ def launch_default_ingress_controller():
 
 
 def restart_unit_services():
-    '''Reload the systemd configuration and restart the services.'''
-    # Tell systemd to reload configuration from disk for all daemons.
-    call(['systemctl', 'daemon-reload'])
-    # Ensure the services available after rebooting.
-    call(['systemctl', 'enable', 'kubelet.service'])
-    call(['systemctl', 'enable', 'kube-proxy.service'])
-    # Restart the services.
-    hookenv.log('Restarting kubelet, and kube-proxy.')
-    call(['systemctl', 'restart', 'kubelet'])
-    call(['systemctl', 'restart', 'kube-proxy'])
+    '''Restart worker services.'''
+    hookenv.log('Restarting kubelet and kube-proxy.')
+    services = ['kube-proxy', 'kubelet']
+    for service in services:
+        service_restart('snap.%s.daemon' % service)
 
 
 def get_kube_api_servers(kube_api):
