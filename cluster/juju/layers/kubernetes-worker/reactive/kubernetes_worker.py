@@ -33,7 +33,7 @@ from charmhelpers.core import hookenv
 from charmhelpers.core.host import service_stop
 
 
-kubeconfig_path = '/srv/kubernetes/config'
+kubeconfig_path = '/root/cdk/kubeconfig'
 
 os.environ['PATH'] += os.pathsep + os.path.join(os.sep, 'snap', 'bin')
 
@@ -91,7 +91,7 @@ def install_kubernetes_components():
     check_call(cmd)
 
     apps = [
-        {'name': 'loopback', 'path': '/opt/cni/bin'}
+        {'name': 'loopback', 'path': '/root/cni'}
     ]
 
     for app in apps:
@@ -315,6 +315,9 @@ def render_init_scripts(api_servers):
     kubelet_opts.add('--require-kubeconfig', None)
     kubelet_opts.add('--kubeconfig', kubeconfig_path)
     kubelet_opts.add('--network-plugin', 'cni')
+    kubelet_opts.add('--cni-bin-dir', '/root/cni/bin')
+    kubelet_opts.add('--cni-conf-dir', '/root/cni/net.d')
+    kubelet_opts.add('--cert-dir', '/root/cdk')
     context['kubelet_opts'] = kubelet_opts.to_s()
     # Create a flag manager for kube-proxy to render kube_proxy_opts.
     kube_proxy_opts = FlagManager('kube-proxy')

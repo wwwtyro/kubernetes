@@ -4,5 +4,5 @@ set -ex
 
 export PATH=$PATH:/snap/bin
 
-kubectl --kubeconfig=/srv/kubernetes/config uncordon $(hostname)
+kubectl --kubeconfig=/root/cdk/config uncordon $(hostname)
 status-set 'active' 'Kubernetes unit resumed'
