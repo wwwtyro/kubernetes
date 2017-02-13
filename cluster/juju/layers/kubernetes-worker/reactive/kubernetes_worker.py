@@ -138,10 +138,10 @@ def update_kubelet_status():
     ''' There are different states that the kubelt can be in, where we are
     waiting for dns, waiting for cluster turnup, or ready to serve
     applications.'''
-    if (_systemctl_is_active('kubelet')):
+    if (_systemctl_is_active('snap.kubelet.daemon')):
         hookenv.status_set('active', 'Kubernetes worker running.')
     # if kubelet is not running, we're waiting on something else to converge
-    elif (not _systemctl_is_active('kubelet')):
+    elif (not _systemctl_is_active('snap.kubelet.daemon')):
         hookenv.status_set('waiting', 'Waiting for kubelet to start.')
 
 
