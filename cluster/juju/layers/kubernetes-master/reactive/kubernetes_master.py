@@ -552,11 +552,11 @@ def configure_master_services():
     scheduler_opts.add('logtostderr', 'true')
     scheduler_opts.add('master', 'http://127.0.0.1:8080')
 
-    cmd = ['snap', 'set', 'kube-apiserver', '%s' % api_opts.to_s()]
+    cmd = ['snap', 'set', 'kube-apiserver'] + api_opts.to_s().split(' ')
     check_call(cmd)
-    cmd = ['snap', 'set', 'kube-controller-manager', '%s' % controller_opts.to_s()]
+    cmd = ['snap', 'set', 'kube-controller-manager'] + controller_opts.to_s().split(' ')
     check_call(cmd)
-    cmd = ['snap', 'set', 'kube-scheduler', '%s' % scheduler_opts.to_s()]
+    cmd = ['snap', 'set', 'kube-scheduler'] + scheduler_opts.to_s().split(' ')
     check_call(cmd)
 
 

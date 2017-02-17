@@ -308,9 +308,9 @@ def configure_worker_services(api_servers, dns):
     kube_proxy_opts.add('v', '0')
     kube_proxy_opts.add('master', ','.join(api_servers), strict=True)
 
-    cmd = ['snap', 'set', 'kubelet', '%s' % kubelet_opts.to_s()]
+    cmd = ['snap', 'set', 'kubelet'] + kubelet_opts.to_s().split(' ')
     check_call(cmd)
-    cmd = ['snap', 'set', 'kube-proxy', '%s' % kube_proxy_opts.to_s()]
+    cmd = ['snap', 'set', 'kube-proxy'] + kube_proxy_opts.to_s().split(' ')
     check_call(cmd)
 
 
