@@ -100,9 +100,9 @@ def setup_authentication():
     api_opts = FlagManager('kube-apiserver')
     controller_opts = FlagManager('kube-controller-manager')
 
-    api_opts.add('--basic-auth-file', '/root/cdk/basic_auth.csv')
-    api_opts.add('--token-auth-file', '/root/cdk/known_tokens.csv')
-    api_opts.add('--service-cluster-ip-range', service_cidr())
+    api_opts.add('basic-auth-file', '/root/cdk/basic_auth.csv')
+    api_opts.add('token-auth-file', '/root/cdk/known_tokens.csv')
+    api_opts.add('service-cluster-ip-range', service_cidr())
     hookenv.status_set('maintenance', 'Rendering authentication templates.')
     htaccess = '/root/cdk/basic_auth.csv'
     if not os.path.isfile(htaccess):
@@ -117,9 +117,9 @@ def setup_authentication():
     cmd = ['openssl', 'genrsa', '-out', '/root/cdk/serviceaccount.key',
            '2048']
     check_call(cmd)
-    api_opts.add('--service-account-key-file',
+    api_opts.add('service-account-key-file',
                  '/root/cdk/serviceaccount.key')
-    controller_opts.add('--service-account-private-key-file',
+    controller_opts.add('service-account-private-key-file',
                         '/root/cdk/serviceaccount.key')
 
     set_state('authentication.setup')
@@ -499,18 +499,18 @@ def handle_etcd_relation(reldata):
     # Never use stale data, always prefer whats coming in during context
     # building. if its stale, its because whats in unitdata is stale
     data = api_opts.data
-    if data.get('--etcd-servers-strict') or data.get('--etcd-servers'):
-        api_opts.destroy('--etcd-cafile')
-        api_opts.destroy('--etcd-keyfile')
-        api_opts.destroy('--etcd-certfile')
-        api_opts.destroy('--etcd-servers', strict=True)
-        api_opts.destroy('--etcd-servers')
+    if data.get('etcd-servers-strict') or data.get('etcd-servers'):
+        api_opts.destroy('etcd-cafile')
+        api_opts.destroy('etcd-keyfile')
+        api_opts.destroy('etcd-certfile')
+        api_opts.destroy('etcd-servers', strict=True)
+        api_opts.destroy('etcd-servers')
 
     # Set the apiserver flags in the options manager
-    api_opts.add('--etcd-cafile', ca)
-    api_opts.add('--etcd-keyfile', key)
-    api_opts.add('--etcd-certfile', cert)
-    api_opts.add('--etcd-servers', connection_string, strict=True)
+    api_opts.add('etcd-cafile', ca)
+    api_opts.add('etcd-keyfile', key)
+    api_opts.add('etcd-certfile', cert)
+    api_opts.add('etcd-servers', connection_string, strict=True)
 
 
 def configure_master_services():
@@ -528,35 +528,35 @@ def configure_master_services():
     server_key_path = layer_options.get('server_key_path')
 
     # Handle static options for now
-    api_opts.add('--min-request-timeout', '300')
-    api_opts.add('--v', '4')
-    api_opts.add('--client-ca-file', ca_cert_path)
-    api_opts.add('--tls-cert-file', server_cert_path)
-    api_opts.add('--tls-private-key-file', server_key_path)
-    api_opts.add('--logtostderr', 'true')
-    api_opts.add('--allow-privileged', 'false')
-    api_opts.add('--insecure-bind-address', '127.0.0.1')
-    api_opts.add('--insecure-port', '8080')
-    api_opts.add('--admission-control',
+    api_opts.add('min-request-timeout', '300')
+    api_opts.add('v', '4')
+    api_opts.add('client-ca-file', ca_cert_path)
+    api_opts.add('tls-cert-file', server_cert_path)
+    api_opts.add('tls-private-key-file', server_key_path)
+    api_opts.add('logtostderr', 'true')
+    api_opts.add('allow-privileged', 'false')
+    api_opts.add('insecure-bind-address', '127.0.0.1')
+    api_opts.add('insecure-port', '8080')
+    api_opts.add('admission-control',
                  'NamespaceLifecycle,LimitRanger,ServiceAccount,ResourceQuota',
                  strict=True)
 
     # Default to 3 minute resync. TODO: Make this configureable?
-    controller_opts.add('--min-resync-period', '3m')
-    controller_opts.add('--v', '2')
-    controller_opts.add('--root-ca-file', ca_cert_path)
-    controller_opts.add('--logtostderr', 'true')
-    controller_opts.add('--master', 'http://127.0.0.1:8080')
+    controller_opts.add('min-resync-period', '3m')
+    controller_opts.add('v', '2')
+    controller_opts.add('root-ca-file', ca_cert_path)
+    controller_opts.add('logtostderr', 'true')
+    controller_opts.add('master', 'http://127.0.0.1:8080')
 
-    scheduler_opts.add('--v', '2')
-    scheduler_opts.add('--logtostderr', 'true')
-    scheduler_opts.add('--master', 'http://127.0.0.1:8080')
+    scheduler_opts.add('v', '2')
+    scheduler_opts.add('logtostderr', 'true')
+    scheduler_opts.add('master', 'http://127.0.0.1:8080')
 
-    cmd = ['snap', 'set', 'kube-apiserver', 'args=%s' % api_opts.to_s()]
+    cmd = ['snap', 'set', 'kube-apiserver', '%s' % api_opts.to_s()]
     check_call(cmd)
-    cmd = ['snap', 'set', 'kube-controller-manager', 'args=%s' % controller_opts.to_s()]
+    cmd = ['snap', 'set', 'kube-controller-manager', '%s' % controller_opts.to_s()]
     check_call(cmd)
-    cmd = ['snap', 'set', 'kube-scheduler', 'args=%s' % scheduler_opts.to_s()]
+    cmd = ['snap', 'set', 'kube-scheduler', '%s' % scheduler_opts.to_s()]
     check_call(cmd)
 
 

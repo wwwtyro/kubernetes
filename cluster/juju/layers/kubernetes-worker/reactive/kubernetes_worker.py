@@ -291,26 +291,26 @@ def configure_worker_services(api_servers, dns):
     ''' Add remaining flags for the worker services and configure snaps to use
     them '''
     kubelet_opts = FlagManager('kubelet')
-    kubelet_opts.add('--require-kubeconfig', None)
-    kubelet_opts.add('--kubeconfig', kubeconfig_path)
-    kubelet_opts.add('--network-plugin', 'cni')
-    kubelet_opts.add('--logtostderr', 'true')
-    kubelet_opts.add('--v', '0')
-    kubelet_opts.add('--address', '0.0.0.0')
-    kubelet_opts.add('--port', '10250')
-    kubelet_opts.add('--allow-privileged', 'false')
-    kubelet_opts.add('--cluster-dns', dns['sdn-ip'])
-    kubelet_opts.add('--cluster-domain', dns['domain'])
+    kubelet_opts.add('require-kubeconfig', None)
+    kubelet_opts.add('kubeconfig', kubeconfig_path)
+    kubelet_opts.add('network-plugin', 'cni')
+    kubelet_opts.add('logtostderr', 'true')
+    kubelet_opts.add('v', '0')
+    kubelet_opts.add('address', '0.0.0.0')
+    kubelet_opts.add('port', '10250')
+    kubelet_opts.add('allow-privileged', 'false')
+    kubelet_opts.add('cluster-dns', dns['sdn-ip'])
+    kubelet_opts.add('cluster-domain', dns['domain'])
 
     kube_proxy_opts = FlagManager('kube-proxy')
-    kube_proxy_opts.add('--kubeconfig', kubeconfig_path)
-    kube_proxy_opts.add('--logtostderr', 'true')
-    kube_proxy_opts.add('--v', '0')
-    kube_proxy_opts.add('--master', ','.join(api_servers), strict=True)
+    kube_proxy_opts.add('kubeconfig', kubeconfig_path)
+    kube_proxy_opts.add('logtostderr', 'true')
+    kube_proxy_opts.add('v', '0')
+    kube_proxy_opts.add('master', ','.join(api_servers), strict=True)
 
-    cmd = ['snap', 'set', 'kubelet', 'args=%s' % kubelet_opts.to_s()]
+    cmd = ['snap', 'set', 'kubelet', '%s' % kubelet_opts.to_s()]
     check_call(cmd)
-    cmd = ['snap', 'set', 'kube-proxy', 'args=%s' % kube_proxy_opts.to_s()]
+    cmd = ['snap', 'set', 'kube-proxy', '%s' % kube_proxy_opts.to_s()]
     check_call(cmd)
 
 
