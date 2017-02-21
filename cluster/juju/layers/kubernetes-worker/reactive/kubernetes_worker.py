@@ -291,7 +291,7 @@ def configure_worker_services(api_servers, dns):
     ''' Add remaining flags for the worker services and configure snaps to use
     them '''
     kubelet_opts = FlagManager('kubelet')
-    kubelet_opts.add('require-kubeconfig', None)
+    kubelet_opts.add('require-kubeconfig', 'true')
     kubelet_opts.add('kubeconfig', kubeconfig_path)
     kubelet_opts.add('network-plugin', 'cni')
     kubelet_opts.add('logtostderr', 'true')
